@@ -1,7 +1,7 @@
 .. -*- rst -*-
 
-DCMI - Dynamic Clamping for Mem-ristor Identification
-=====================================================
+DCMI - Dynamic Clamping for Mem-resistor Identification
+=======================================================
 
 Description
 -----------
