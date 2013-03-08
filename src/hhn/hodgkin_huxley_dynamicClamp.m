@@ -25,9 +25,9 @@
 %
 %   This file is based on the code written by Yiyin Zhou.    
 %
-%   Authors: Chung-Heng Yeh <chyeh@ee.columbia.edu>
+%   _Authors: Chung-Heng Yeh <chyeh@ee.columbia.edu>_
 %
-%   Copyright 2012-2014 Aurel A. Lazar, Yiyin Zhou, and Chung-Heng Yeh
+%   _Copyright 2012-2014 Aurel A. Lazar, Yiyin Zhou, and Chung-Heng Yeh_
 
 function [Vout] = hodgkin_huxley_dynamicClamp(t, I_ext, varargin)
     
