@@ -1,5 +1,5 @@
 %MEM_CON_TEMPLATE(v, x, t, varargin)
-%   dx = EM_CON_TEMPLATE(v, x, varargin) computes the derivatives of state 
+%   dx = MEM_CON_TEMPLATE(v, x, varargin) computes the derivatives of state 
 %   variables X based on a set ordinary differential equations implemented 
 %   inside this function at time T. Each ODE is a function of state 
 %   variables X and the voltage V. The maximum conductance of each channel 

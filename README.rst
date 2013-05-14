@@ -13,7 +13,7 @@ identification of mem-resistive device, for example, Hodgkin-Huxley neuron.
 Authors & Acknowledgments
 -------------------------
 
-This software was written Chung-Heng Yeh, currently at the Bionet [1]_ 
+This software is written by Chung-Heng Yeh, currently at the Bionet [1]_ 
 Group at Columbia University.
 
 License

@@ -18,16 +18,25 @@
 %   handle MEM_CON. User should also use 
 %   HODGKIN_HUXLEY_DYNAMICCLAMP(...,'MEMINITSTATE',STATE)
 %   to initialize the value of the internal state of the memconductance. 
-% 
+%
+%   V = HODGKIN_HUXLEY_DYNAMICCLAMP(...,'MAXCON',maxcon) specifies the 
+%   maximum conductance of the injected mem-conductance.
+%
+%   V = HODGKIN_HUXLEY_DYNAMICCLAMP(...,'ResetTime',TIME) sets the TIME 
+%   at which the maximum values of mem-conductance is applied. Before TIME, 
+%   the maximum conductance of the mem-conductance is initialized to a zero 
+%   vector. If 'ResetTime' is not specified, TIME is set to the beginning 
+%   of the simulation.
+%
 %   V = HODGKIN_HUXLEY_DYNAMICCLAMP(...,'HHN',@hhn) replaces the function 
 %   handle for Hodgkin-Huxley equations with the @HHN, and then simulates 
 %   the membrane voltage V.
 %
 %   This file is based on the code written by Yiyin Zhou.    
 %
-%   _Authors: Chung-Heng Yeh <chyeh@ee.columbia.edu>_
+%   Authors: Chung-Heng Yeh
 %
-%   _Copyright 2012-2014 Aurel A. Lazar, Yiyin Zhou, and Chung-Heng Yeh_
+%   Copyright 2012-2014 Aurel A. Lazar, Yiyin Zhou, and Chung-Heng Yeh
 
 function [Vout] = hodgkin_huxley_dynamicClamp(t, I_ext, varargin)
     
@@ -39,8 +48,12 @@ function [Vout] = hodgkin_huxley_dynamicClamp(t, I_ext, varargin)
     % Specify the memconductance ODEs using a function handle, and the 
     % memconductance initial state.
     addParamValue(p,'MemInitState', [0 0 0],@isnumeric);
-    null_mem_con = @(v,x,t) [0 x.*[0 0 0]];  
+    null_mem_con = @(v,x) [0 x.*[0 0 0]];  
     addParamValue(p,'MemCon', null_mem_con,@(x) isa(x,'function_handle'));
+    % Specify the time to reset the maximum value of the mem-conductance
+    addParamValue(p,'resetTime', t(1),@isnumeric);
+    % Specify the maximum conductance value
+    addParamValue(p,'MaxCon', null_mem_con,@isnumeric);
     % Turn 'On' or 'Off' the sodium, potassium, and leaky channel.
     addParamValue(p,'Sodium',   'on', @(x) any(validatestring(x,{'On','Off'})));
     addParamValue(p,'Potassium','on', @(x) any(validatestring(x,{'On','Off'})));
@@ -74,11 +87,19 @@ function [Vout] = hodgkin_huxley_dynamicClamp(t, I_ext, varargin)
     % Initialize Memconductance internal states and function handel. 
     % Notice that the output of mem_ode is [Im  d_mem_state]. Im is the 
     % term in V's ODE caused by the memristor.
-    mem_state = p.Results.MemInitState;
-    mem_con   = p.Results.MemCon;
+    mem_state   = p.Results.MemInitState;
+    mem_con     = p.Results.MemCon;
     
+    % Convert reset time to discrete index
+    reset_index = floor((p.Results.resetTime-t(1))*1000/dt ) + 1;
+    % Initialize mem conductance value
+    MemConVal = [0 0 0];
     % Use forward Euler method to solve ODE.
     for i = 1:numel(I_ext)
+        if i == reset_index
+            MemConVal = p.Results.MaxCon;
+        end;
+            
         % Compute the HHN ODEs. Notice the first entry of the output is 
         % used in dv/dt equitoan.
         temp  = hhn(v, nmh_state, NaKL_flag);
@@ -86,7 +107,7 @@ function [Vout] = hodgkin_huxley_dynamicClamp(t, I_ext, varargin)
         d_nmh = temp(2:end);
         % Compute the Memconductance ODEs. Notice the first entry of the output 
         % is used in dv/dt equation.
-        temp  = mem_con(v, mem_state, t(i));
+        temp  = mem_con(v, mem_state, MemConVal);
         I_mem = temp(1);
         d_mem = temp(2:end);
         % Use the forward Euler method to integrate.
