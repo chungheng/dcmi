@@ -34,11 +34,11 @@ le  = cell(1,numel(gNa));
 figure(); cs = colormap(hsv(numel(gNa)+4));
 for i = 1:numel(gNa)
     V  = hodgkin_huxley_dynamicClamp(t,I,'ResetTime',0,...
-         'memcon', @mem_con,'MemInitState',[0 0 0],'MaxCon',[-gNa(i) 0 0]);
+         'memcon', @mem_con,'MemInitState',[0 0 0],'MaxCon',[-gNa(i) 0 -0.3]);
     hold on;plot(t*1e3,V(:,1),'Color',cs(i,:));
     le{i} = num2str(-gNa(i));
 end
-ylim([-100 20]);legend(le);xlim([-50 100]);
+%ylim([-100 20]);legend(le);xlim([-50 100]);
 xlabel('time, [ms]');ylabel('voltage, [mV]');
 
 %% Counter-balance the Potassium Channel channel
