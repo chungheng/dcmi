@@ -11,14 +11,22 @@
 %   HODGKIN_HUXLEY_DYNAMICCLAMP(...,'MEMINITSTATE',STATE)
 %   to initialize the value of the internal state of the memconductance. 
 %
-%   V = HODGKIN_HUXLEY_DYNAMICCLAMP(...,'MAXCON',maxcon) specifies the 
-%   maximum conductance of the injected mem-conductance.
+%   HODGKIN_HUXLEY_DYNAMICCLAMP(...,'MAXCON',MAXCON,'MINCON',MINCON) 
+%   specifies the initial value for the upper and lower bound of the maximum
+%   conductance value.
 %
-%   V = HODGKIN_HUXLEY_DYNAMICCLAMP(...,'ResetTime',TIME) sets the TIME 
-%   at which the maximum values of mem-conductance is applied. Before TIME, 
-%   the maximum conductance of the mem-conductance is initialized to a zero 
-%   vector. If 'ResetTime' is not specified, TIME is set to the beginning 
-%   of the simulation.
+%   HODGKIN_HUXLEY_DYNAMICCLAMP(...,'MAXVOLT',MAXVOLT,'MINVOLT',MINVOLT) 
+%   sets the boundary values for determining whether the system is brokendown.
+% 
+%   HODGKIN_HUXLEY_DYNAMICCLAMP(...,'RESETPERIOD',RESETPERIODTIME) sets 
+%   RESETRERIOD, the duration of period of time, in which the system enters the 
+%   reset mode. In reset mode the value of conductance of the injected devise is 
+%   set to zero. The system should return back to the steady state of zero-input 
+%   response. If not, RESETPERIOD needs to be extended.
+%
+%   HODGKIN_HUXLEY_DYNAMICCLAMP(...,'WAITPERIOD',WAITPERIOD) sets WAITPERIOD, 
+%   the maximal duration of time that the system is not brokendown. This 
+%   parameter is used to judge that the system is in a stable mode.
 %
 %   V = HODGKIN_HUXLEY_DYNAMICCLAMP(...,'HHN',@hhn) replaces the function 
 %   handle for Hodgkin-Huxley equations with the @HHN, and then simulates 
@@ -30,7 +38,7 @@
 %
 %   Copyright 2012-2014 Aurel A. Lazar, Yiyin Zhou, and Chung-Heng Yeh
 
-function [Vout Mout] = hodgkin_huxley_BSDC(t, I_ext, varargin)
+function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     
     % Handle the optional input parameters.
     % =====================================================================
@@ -50,19 +58,20 @@ function [Vout Mout] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     
     % Specify the maximum conductance value
     addParamValue(p,'MaxCon', null_mem_con, @isnumeric);
-    % Specify the maximum conductance update step
-    addParamValue(p,'MaxConUpdate', null_mem_con, @isnumeric);
+    % Specify the minimum conductance value
+    addParamValue(p,'MinCon', Inf, @isnumeric);
+    % Sspecify the maximum conductance update step
+    %addParamValue(p,'MaxConUpdate', Inf, @isnumeric);
     
 
     % Specify the upper bound of the membrane voltage
-    addParamValue(p,'MaxVolt',   20, @isnumeric);
+    addParamValue(p,'MaxVolt',   100, @isnumeric);
     % Specify the lower bound of the membrane voltage
     addParamValue(p,'MinVolt', -100, @isnumeric);
     % Specify the reset period
     addParamValue(p,'resetPeriod', .1, @isnumeric);
-    
-    
-    
+    % Specify the waiting period
+    addParamValue(p,'waitPeriod', .5, @isnumeric);
     
     p.KeepUnmatched = true;
     parse(p,varargin{:});
@@ -95,24 +104,33 @@ function [Vout Mout] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     mem_state   = p.Results.MemInitState;
     mem_con     = p.Results.MemCon;
     mem_max_con = p.Results.MaxCon;
-    mem_max_up  = p.Results.MaxConUpdate;
+    mem_min_con = p.Results.MinCon;
+    %mem_max_up  = p.Results.MaxConUpdate;
     
     % Convert reset period to number of steps
     reset_step  = round((p.Results.resetPeriod)*1000/dt );
     reset_index = 1+reset_step;
-    reset_flag  = false;
-    
-    
+    reset_flag  = true;
+    % Convert waiting period to number of steps
+    wait_step   = round((p.Results.waitPeriod)*1000/dt );
+    wait_index  = reset_index + wait_step;
     % Initialize mem conductance value
     MemConVal = zeros(size(mem_max_con));
     Mout      = zeros(numel(t),numel(MemConVal));
+    
+    % Initialize contral signal vector; column-1 is for reset signal, and 
+    % column-2 is for breakdown time.
+    ctrl_signal = zeros(numel(t),2);
+    
     % Use forward Euler method to solve ODE.
     for i = 1:numel(I_ext)
+        
         % Leave Reset mode
         if i == reset_index
-            MemConVal  = mem_max_con;
+            MemConVal  = 0.5*( mem_max_con + mem_min_con );
             reset_flag = false;
         end
+        ctrl_signal(i,1) = reset_flag;
         
         Mout(i,:) = MemConVal; 
         % Compute the HHN ODEs. Notice the first entry of the output is 
@@ -132,22 +150,26 @@ function [Vout Mout] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         Vout(i,:) = [v nmh_state];
         
         if ~reset_flag
-            % Membrane voltage exceeds upper bound
-            if v > p.Results.MaxVolt
+            % Membrane voltage tends to be unbounded, indicating system is brokendown
+            if v > p.Results.MaxVolt || v < p.Results.MinVolt
+                disp(['Unbounded:', num2str(t(i)),' conductance value: ', num2str(MemConVal)]);
+                mem_max_con = MemConVal;
                 reset_mode();
+                ctrl_signal(i,2) = 1;
             end
-
-
-            % Membrane voltage falls below the lower bound
-            if v < p.Results.MinVolt
+            % Membrane voltage reaches steady state
+            if i == wait_index
+                disp(['Reach waiting point:', num2str(t(i)),' conductance value: ', num2str(MemConVal)]);
+                mem_min_con = MemConVal;
                 reset_mode();
             end
         end
     end
     function reset_mode
-        mem_max_con = mem_max_con + mem_max_up;
+        %mem_max_con = mem_max_con + mem_max_up;
         MemConVal   = zeros(size(MemConVal));
         reset_index = i+reset_step;
+        wait_index  = reset_index + wait_step;
         reset_flag  = true;
     end
 end
