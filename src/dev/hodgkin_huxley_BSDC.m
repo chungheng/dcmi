@@ -62,16 +62,15 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     addParamValue(p,'MinCon', Inf, @isnumeric);
     % Sspecify the maximum conductance update step
     %addParamValue(p,'MaxConUpdate', Inf, @isnumeric);
-    
 
     % Specify the upper bound of the membrane voltage
     addParamValue(p,'MaxVolt',   100, @isnumeric);
     % Specify the lower bound of the membrane voltage
     addParamValue(p,'MinVolt', -100, @isnumeric);
     % Specify the reset period
-    addParamValue(p,'resetPeriod', .1, @isnumeric);
+    addParamValue(p,'resetPeriod', .05, @isnumeric);
     % Specify the waiting period
-    addParamValue(p,'waitPeriod', .5, @isnumeric);
+    addParamValue(p,'waitPeriod', .2, @isnumeric);
     
     p.KeepUnmatched = true;
     parse(p,varargin{:});
