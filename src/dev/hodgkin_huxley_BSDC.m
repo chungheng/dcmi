@@ -101,9 +101,10 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     
     % Initialize HHN states V, n, m, and h.
     nmh_state = [0 0 1];
-    v = -64.9964;
+    v    = -64.9964;
+    V3   = zeros(1,3);
     Vout = zeros(numel(t),4);
-    
+    spk_status = zeros(1,4);
     % Initialize the Hodgkin-Huxley neuron function handel. 
     hhn = p.Results.HHN;
     
@@ -158,6 +159,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         nmh_state  = nmh_state + dt * d_nmh;
         dv = (I_ext(i)+I_hhn+I_mem);
         v  = v + dt * dv;
+        V3 = [V3(2:3) v];
         Vout(i,:) = [v nmh_state];
         %Vout(i,1) = dv;
         if ~reset_flag
@@ -174,8 +176,17 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
                 mem_min_con = MemConVal;
                 reset_mode();
             end
+            % Detecting Spike
+            if V3(2) > V3(1) && V3(2) > V3(3)
+                if norm( (spk_status-Vout(i-1,:))./spk_status ) < 5e-3
+                    mydisp('operating on the limit cycle.\n');
+                    mem_min_con = MemConVal;
+                    reset_mode();
+                else
+                    spk_status = Vout(i-1,:);
+                end
+            end
         end
-        
     end
     mydisp('End of dynamic clamping\n');
     function reset_mode
@@ -184,6 +195,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         reset_index = i+reset_step;
         wait_index  = reset_index + wait_step;
         reset_flag  = true;
+        spk_status  = ones(size(spk_status))*-10;
     end
 end
 % Define Default Hodgkin-Huxley Nueron ODEs. This function handle is 
