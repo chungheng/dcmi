@@ -105,6 +105,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     V3   = zeros(1,3);
     Vout = zeros(numel(t),4);
     spk_status = zeros(1,4);
+    spk_count  = 0;
     % Initialize the Hodgkin-Huxley neuron function handel. 
     hhn = p.Results.HHN;
     
@@ -179,12 +180,14 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
             % Detecting Spike
             if V3(2) > V3(1) && V3(2) > V3(3)
                 if norm( (spk_status-Vout(i-1,:))./spk_status ) < 5e-3
-                    mydisp('operating on the limit cycle.\n');
-                    mem_min_con = MemConVal;
-                    reset_mode();
-                else
-                    spk_status = Vout(i-1,:);
+                    spk_count = spk_count + 1;
+                    if spk_count == 5
+                        mydisp('operating on the limit cycle.\n');
+                        mem_min_con = MemConVal;
+                        reset_mode();
+                    end
                 end
+                spk_status = Vout(i-1,:);
             end
         end
     end
@@ -196,6 +199,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         wait_index  = reset_index + wait_step;
         reset_flag  = true;
         spk_status  = ones(size(spk_status))*-10;
+        spk_count   = 0;
     end
 end
 % Define Default Hodgkin-Huxley Nueron ODEs. This function handle is 
