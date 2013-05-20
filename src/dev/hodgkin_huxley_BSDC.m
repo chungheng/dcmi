@@ -32,9 +32,11 @@
 %   handle for Hodgkin-Huxley equations with the @HHN, and then simulates 
 %   the membrane voltage V.
 %
-%   This file is based on the code written by Yiyin Zhou.    
+%   HODGKIN_HUXLEY_DYNAMICCLAMP(...,'VERBOSE',TRUE) sets the program to verbose
+%   mode. Internal state of the program will be printed at command line. 
+%   'VERBOSE' is set to false by default.
 %
-%   Authors: Chung-Heng Yeh
+%   Authors: Chung-Heng Yeh <chyeh@ee.columbia.edu>
 %
 %   Copyright 2012-2014 Aurel A. Lazar, Yiyin Zhou, and Chung-Heng Yeh
 
@@ -72,6 +74,9 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     % Specify the waiting period
     addParamValue(p,'waitPeriod', .2, @isnumeric);
     
+    % Set/Unset Verbose mode
+    addParamValue(p,'Verbose',false,@islogical);
+    
     p.KeepUnmatched = true;
     parse(p,varargin{:});
 
@@ -81,7 +86,12 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         error(['"',UnmatchedParam{1},'" is not a valid parameter.']);
     end
     % =====================================================================
-    
+    % Set display mode
+    if p.Results.Verbose
+        mydisp = @(varargin) fprintf(varargin{:});
+    else
+        mydisp = @(varargin) true;
+    end
     % Use boolean flag to indicate the on/off status of each channel.
     NaKL_flag = strcmpi('on', ...
                 {p.Results.Sodium, p.Results.Potassium, p.Results.Leaky});
@@ -102,7 +112,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     % term in V's ODE caused by the memristor.
     mem_state   = p.Results.MemInitState;
     mem_con     = p.Results.MemCon;
-    mem_max_con = p.Results.MaxCon;
+    mem_max_con = p.Results.MaxCon*2; % Scaled by 2 here, but would be scaled down
     mem_min_con = p.Results.MinCon;
     %mem_max_up  = p.Results.MaxConUpdate;
     
@@ -128,6 +138,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         if i == reset_index
             MemConVal  = 0.5*( mem_max_con + mem_min_con );
             reset_flag = false;
+            mydisp('Conductance is set to: %s...',num2str(MemConVal));
         end
         ctrl_signal(i,1) = reset_flag;
         
@@ -145,25 +156,28 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         % Use the forward Euler method to integrate.
         mem_state  = mem_state + dt * d_mem;
         nmh_state  = nmh_state + dt * d_nmh;
-        v = v + dt * (I_ext(i)+I_hhn+I_mem);
+        dv = (I_ext(i)+I_hhn+I_mem);
+        v  = v + dt * dv;
         Vout(i,:) = [v nmh_state];
-        
+        %Vout(i,1) = dv;
         if ~reset_flag
             % Membrane voltage tends to be unbounded, indicating system is brokendown
             if v > p.Results.MaxVolt || v < p.Results.MinVolt
-                disp(['Unbounded:', num2str(t(i)),' conductance value: ', num2str(MemConVal)]);
+                mydisp('system breaks down.\n');
                 mem_max_con = MemConVal;
                 reset_mode();
                 ctrl_signal(i,2) = 1;
             end
             % Membrane voltage reaches steady state
-            if i == wait_index
-                disp(['Reach waiting point:', num2str(t(i)),' conductance value: ', num2str(MemConVal)]);
+            if norm( [dv d_nmh] ) < 1e-10
+                mydisp('reaches the steady state.\n');
                 mem_min_con = MemConVal;
                 reset_mode();
             end
         end
+        
     end
+    mydisp('End of dynamic clamping\n');
     function reset_mode
         %mem_max_con = mem_max_con + mem_max_up;
         MemConVal   = zeros(size(MemConVal));
