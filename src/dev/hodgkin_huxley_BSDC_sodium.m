@@ -98,8 +98,9 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC_sodium(t, I_ext, varargin
     % term in V's ODE caused by the memristor.
     mem_state   = p.Results.MemInitState;
     mem_con     = p.Results.MemCon;
-    mem_max_con = p.Results.MaxCon*2; % Scaled by 2 here, but would be scaled down
     mem_min_con = p.Results.MinCon;
+    mem_max_con = p.Results.MaxCon*2-mem_min_con; % Scaled by 2 here, but would be scaled down
+    
     %mem_max_up  = p.Results.MaxConUpdate;
     
     % Convert reset period to number of steps
@@ -114,13 +115,16 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC_sodium(t, I_ext, varargin
     % column-2 is for breakdown time.
     ctrl_signal = zeros(numel(t),2);
     
+    % Negative derivative indicator
+    isDecreasing = false;
+    
     % Use forward Euler method to solve ODE.
     for i = 1:numel(I_ext)    
         % Leave Reset mode
         if i == reset_index
             MemConVal  = 0.5*( mem_max_con + mem_min_con );
             reset_flag = false;
-            mydisp('Conductance is set to: %s...',num2str(MemConVal));
+            mydisp('Conductance is set to: %9.2f%9.2f%9.2f...',MemConVal(:));
         end
         ctrl_signal(i,1) = reset_flag;
         
@@ -145,25 +149,32 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC_sodium(t, I_ext, varargin
         if ~reset_flag
             % Membrane voltage is decreasing
             if dv < -1e-9
-                mydisp('membrane voltage is decreasing.\n');
-                mem_min_con = MemConVal;
-                reset_mode();
-                ctrl_signal(i,2) = 1;
+                if ~isDecreasing
+                    mydisp('membrane voltage is decreasing...');
+                end
+                isDecreasing = true;
+                
             end
             % Membrane voltage reaches steady state
             if norm( [dv d_nmh] ) < 1e-10
                 mydisp('reaches the steady state.\n');
-                mem_max_con = MemConVal;
+                if isDecreasing
+                    mem_min_con = MemConVal;
+                else
+                    mem_max_con = MemConVal;
+                end
                 reset_mode();
             end
         end
+        ctrl_signal(i,2) = isDecreasing;
     end
     mydisp('End of dynamic clamping\n');
     function reset_mode
         %mem_max_con = mem_max_con + mem_max_up;
-        MemConVal   = zeros(size(MemConVal));
-        reset_index = i+reset_step;
-        reset_flag  = true;
+        MemConVal    = zeros(size(MemConVal));
+        reset_index  = i+reset_step;
+        reset_flag   = true;
+        isDecreasing = false;
     end
 end
 % Define Default Hodgkin-Huxley Nueron ODEs. This function handle is 

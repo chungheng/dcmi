@@ -9,7 +9,7 @@ gi = -1;
 g  = -0.3;
 [V M S] = hodgkin_huxley_BSDC(t,I,'Verbose',true,...
           'memcon', @mem_con,'MemInitState',[0 0 0],'MaxCon',[0 0 gi],'MinCon',[0 0 0]);
-%%
+
 figure();
     subplot(3,1,1);
         plot(t*1e3,V(:,1));xlim(1e3*[t(1) t(end)]);ylabel('Membrane voltage, [mV]');
@@ -48,12 +48,12 @@ figure();
         
 %% Identification of sodium channel using binary search dynamic clamping
 dt = 1e-5;
-t  = -0.1:dt:2;
+t  = -0.1:dt:3;
 I  = 0*ones(size(t));
 gi = -140;
 g  = -120;
 [V M S] = hodgkin_huxley_BSDC_sodium(t,I,'Verbose',true,...
-          'memcon', @mem_con,'MemInitState',[0 0 0],'MaxCon',[gi -18 0],'MinCon',[0 -36 0]);
+          'memcon', @mem_con,'MemInitState',[0 0 0],'MaxCon',[gi -36 0],'MinCon',[0 -36 0]);
 figure();
     subplot(3,1,1);
         plot(t*1e3,V(:,1));xlim(1e3*[t(1) t(end)]);ylabel('Membrane voltage, [mV]');

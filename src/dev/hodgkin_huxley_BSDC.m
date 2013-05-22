@@ -114,8 +114,8 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     % term in V's ODE caused by the memristor.
     mem_state   = p.Results.MemInitState;
     mem_con     = p.Results.MemCon;
-    mem_max_con = p.Results.MaxCon*2; % Scaled by 2 here, but would be scaled down
     mem_min_con = p.Results.MinCon;
+    mem_max_con = p.Results.MaxCon*2-mem_min_con; % Scaled by 2 here, but would be scaled down
     %mem_max_up  = p.Results.MaxConUpdate;
     
     % Convert reset period to number of steps
@@ -140,7 +140,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         if i == reset_index
             MemConVal  = 0.5*( mem_max_con + mem_min_con );
             reset_flag = false;
-            mydisp('Conductance is set to: %s...',num2str(MemConVal));
+            mydisp('Conductance is set to: %9.2f%9.2f%9.2f...',MemConVal(:));
         end
         ctrl_signal(i,1) = reset_flag;
         
