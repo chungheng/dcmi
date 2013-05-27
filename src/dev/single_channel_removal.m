@@ -5,14 +5,15 @@ addpath('../hhn/');
 %% Reset process
 % Demonstrate the dynamics of the state varibles of both mem-conductance 
 % and the neuron model during RESETTIME.
+close all;
 dt = 1e-5;
-t  = -0.05:dt:.3;
+t  = -0.05:dt:.05;
 I  = 0*ones(size(t));
 
 [V M] = hodgkin_huxley_BSDC(t,I,'ResetPeriod',0,...
          'memcon', @mem_con,'MemInitState',[0 0 0],'MaxCon',[0 0 0],'MinCon',[0 0 0]);
 
-figure();plot(t*1e3,V(:,1));xlim([-50 0]);ylim([-80 20]);
+figure();plot(t*1e3,V(:,1));xlim([-50 0]);ylim([-80 40]);
          xlabel('time, [ms]');ylabel('voltage, [mV]');
 figure();plot(t*1e3,V(:,2),'r',t*1e3,M(:,4),'--r',...
               t*1e3,V(:,3),'g',t*1e3,M(:,5),'--g',...
