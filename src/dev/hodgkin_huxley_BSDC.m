@@ -100,7 +100,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     dt = 1000*(t(2)-t(1));
     
     % Initialize HHN states V, n, m, and h.
-    nmh_state = [0 0 1];
+    nmh_state = rand(1,3);%[0 0 1];
     v    = -64.9964;
     V3   = zeros(1,3);
     Vout = zeros(numel(t),4);
@@ -127,7 +127,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
     wait_index  = reset_index + wait_step;
     % Initialize mem conductance value
     MemConVal = zeros(size(mem_max_con));
-    Mout      = zeros(numel(t),numel(MemConVal));
+    Mout      = zeros(numel(t),2*numel(MemConVal));
     
     % Initialize contral signal vector; column-1 is for reset signal, and 
     % column-2 is for breakdown time.
@@ -144,7 +144,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         end
         ctrl_signal(i,1) = reset_flag;
         
-        Mout(i,:) = MemConVal; 
+        Mout(i,1:end/2) = MemConVal; 
         % Compute the HHN ODEs. Notice the first entry of the output is 
         % used in dv/dt equitoan.
         temp  = hhn(v, nmh_state, NaKL_flag);
@@ -162,6 +162,7 @@ function [Vout Mout ctrl_signal] = hodgkin_huxley_BSDC(t, I_ext, varargin)
         v  = v + dt * dv;
         V3 = [V3(2:3) v];
         Vout(i,:) = [v nmh_state];
+        Mout(i,1+end/2:end) = mem_state;
         %Vout(i,1) = dv;
         if ~reset_flag
             % Membrane voltage tends to be unbounded, indicating system is brokendown
