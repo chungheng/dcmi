@@ -3,8 +3,8 @@ function [out, J] = HH_Jacobian(x,g)
     gNa = g(1);
     gK  = g(2);
     gL  = g(3);
-    ENa = -77;
-    EK  = 50;
+    ENa = 50;
+    EK  = -77;
     EL  = -54.387;
     v   = x(1);
     
