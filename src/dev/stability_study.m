@@ -16,8 +16,8 @@ idx = find(f == 1);
 le = cell(1,numel(idx)-1);
 figure();cs = colormap( hsv( numel(idx)+1 ) );
 
-for i = 1:numel(idx)-1
-    hold on;plot(X(idx(i:i+1),1),X(idx(i:i+1),2),'color',cs(i,:));
+for i = 1:numel(idx)
+    hold on;plot(X(idx(i),1),X(idx(i),2),'o','color',cs(i,:));
     le{i} = num2str(gL(idx(i)));
 end
 grid on;axis([-100 -55 0 0.5]);legend(le,'Location','NorthWest');
@@ -103,3 +103,71 @@ figure();plot(ss(1),ss(2),'go');hold on;
          xlim([-105 -55]);ylim([0 0.5]);title(['g*_L=',num2str(gl,'%3.2f')]);
          legend('Steady state of the oringinal system');
 
+%% Stability study of pseudo Potassium channel injection
+%%
+% Plot the null-solution for gK of different value. There is no solution 
+% when gL is negative
+ss =  [40    0.3177    0.0530    0.5960];
+gK = -5:5;
+X  = zeros(numel(gK), 4);
+f  = zeros(1,numel(gK));
+for i = 1:numel(gK)
+    options = optimset('MaxFunEvals', 5000);
+    [x fval flag] = fsolve( @(x) hhn(x,[120 gK(i) 0.3]), ss, options  );
+    if flag == 1
+        gK(i)
+        HH_Jacobian(x,[120 gK(i) 0.3])
+    end
+    X(i,:)  = x;
+    f(i) = flag;
+end
+idx = find(f == 1);
+
+le = cell(1,numel(idx)-1);
+figure();cs = colormap( hsv( numel(idx)+1 ) );
+
+for i = 1:numel(idx)
+    hold on;plot(X(idx(i),1),X(idx(i),2),'o','color',cs(i,:));
+    le{i} = num2str(gK(idx(i)));
+end
+grid on;axis([-80 80 0 1]);legend(le,'Location','NorthWest');
+xlabel('Voltage, [mV]');ylabel('N');
+
+%% 
+% Highlight the vector field 
+ss =  [-64.9964    0.3177    0.0530    0.5960];
+v = -80:10:80;
+n = 0:0.02:1;
+[V, N] = meshgrid(v,n);
+% gL = 0.6
+gk = 2;
+[DV DN] = hhn_vector_field(V, N, [120 gk 0.3]);
+idx = find( abs(gK-gk)<0.01, 1, 'first');
+figure();plot( X(idx,1) , X(idx,2) ,'ro',ss(1),ss(2),'go');
+         hold on;quiver(V,N,DV,DN,0.5,'Marker','o','ShowArrowHead','Off');
+         xlim([-80 80]);ylim([0 1]);title(['g*_L=',num2str(gk,'%3.2f')]);
+         legend('Steady state of the new system','Steady state of the oringinal system');
+% gL = 0.3
+gk = 0;
+[DV DN] = hhn_vector_field(V, N, [120 gk 0.3]);
+idx = find( abs(gK-gk)<0.01, 1, 'first');
+figure();plot( X(idx,1) , X(idx,2) ,'ro',ss(1),ss(2),'go');
+         hold on;quiver(V,N,DV,DN,0.5,'Marker','o','ShowArrowHead','Off');
+         xlim([-80 80]);ylim([0 1]);title(['g*_L=',num2str(gk,'%3.2f')]);
+         legend('Steady state of the new system','Steady state of the oringinal system');
+% gL = 0
+gk = -2;
+[DV DN] = hhn_vector_field(V, N, [120 gk 0.3]);
+idx = find( abs(gK-gk)<0.01, 1, 'first');
+figure();plot( X(idx,1) , X(idx,2) ,'ro',ss(1),ss(2),'go');
+         hold on;quiver(V,N,DV,DN,0.5,'Marker','o','ShowArrowHead','Off');
+         xlim([-80 80]);ylim([0 1]);title(['g*_L=',num2str(gk,'%3.2f')]);
+         legend('Steady state of the new system','Steady state of the oringinal system');
+% gL = 0.3
+gk = -4;
+[DV DN] = hhn_vector_field(V, N, [120 gk 0.3]);
+idx = find( abs(gK-gk)<0.01, 1, 'first');
+figure();plot( X(idx,1) , X(idx,2) ,'ro',ss(1),ss(2),'go');
+         hold on;quiver(V,N,DV,DN,0.5,'Marker','o','ShowArrowHead','Off');
+         xlim([-80 80]);ylim([0 1]);title(['g*_L=',num2str(gk,'%3.2f')]);
+         legend('Steady state of the new system','Steady state of the oringinal system');
