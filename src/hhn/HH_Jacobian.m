@@ -55,9 +55,9 @@ function [out, J] = HH_Jacobian(x,g)
     dDm_dm = - (a_m+b_m);
     dDh_dh = - (a_h+b_h);
     
-    dDn_dV = - a_n_dv*(1-n) - b_n_dv*n;
-    dDm_dV = - a_m_dv*(1-m) - b_m_dv*m;
-    dDh_dV = - a_h_dv*(1-h) - b_h_dv*h;
+    dDn_dV = a_n_dv*(1-n) - b_n_dv*n;
+    dDm_dV = a_m_dv*(1-m) - b_m_dv*m;
+    dDh_dV = a_h_dv*(1-h) - b_h_dv*h;
     
     J = [dDV_dV dDV_dn dDV_dm dDV_dh ;...
          dDn_dV dDn_dn      0      0 ;...
