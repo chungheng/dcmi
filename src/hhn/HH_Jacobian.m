@@ -41,9 +41,6 @@ function [out, J] = HH_Jacobian(x,g)
         h = x(4);
     end
     
-    
-      
-    
     % compute partial derivative of v'
     dDV_dV = (-gNa*m^3*h-gK*n^4-gL);
     dDV_dn = -4*gK*n^3*(v-EK);

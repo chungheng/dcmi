@@ -160,11 +160,10 @@ figure();plot(ss(1),ss(2),'go');hold on;
          legend('Steady state of the oringinal system');
 
 %% Stability study of pseudo Potassium channel injection
-%%
 % Plot the null-solution for gK of different value. There is no solution 
 % when gL is negative
 ss =  [40    0.3177    0.0530    0.5960];
-gK = -5:5;
+gK = [-10:-1 0.27 0:10];
 X  = zeros(numel(gK), 4);
 f  = zeros(1,numel(gK));
 for i = 1:numel(gK)
@@ -187,6 +186,76 @@ for i = 1:numel(idx)
 end
 grid on;axis([-80 80 0 1]);legend(le,'Location','NorthWest');
 xlabel('Voltage, [mV]');ylabel('N');
+
+%%
+% Print and plot trajectory of the eigenvalue of the Jacobian matrix
+
+ss =  [40    0.3177    0.0530    0.5960];
+gK = [-0.27 0:10];
+E  = zeros(4,numel(gK));
+for i = 1:numel(gK)
+    options = optimset('MaxFunEvals', 5000);
+    [x fval flag] = fsolve( @(x) hhn(x,[120 gK(i) 0.3]), ss, options  );
+    e = HH_Jacobian( x, [120 gK(i) 0.3] );
+    e1 = sort( e( abs(imag(e)) < 1e-9 ) );
+    E(:,i) = [e1(2); e1(1); e( abs(imag(e))>1e-9 )];
+end
+
+figure();
+for i = 1:numel(gK)
+    fprintf( '%2.4f & %1.4f & %1.4f & %1.4f%+1.4fi & %1.4f%+1.4fi\n', ...
+            gK(i), E(1,i), E(2,i) , real(E(3,i)), imag(E(3,i)), real(E(4,i)), imag(E(4,i)) );
+end
+plot( [-8 2], [0 0], '-k', [0 0], [-5 5], 'k');
+hold on;plot( real(E(1,:)),imag(E(1,:)),'r','linewidth',1.5);
+hold on;plot( real(E(2,:)),imag(E(2,:)),'g','linewidth',1.5);
+hold on;plot( real(E(3,:)),imag(E(3,:)),'m','linewidth',1.5);
+hold on;plot( real(E(4,:)),imag(E(4,:)),'b','linewidth',1.5);
+xlim([-8 2]);ylim([-5 5]);
+
+%% 
+% Create a animation of eigenvalue trajectory
+ss =  [40    0.3177    0.0530    0.5960];
+gK = [-0.27 0:0.1:10];
+E  = zeros(4,numel(gK));
+for i = 1:numel(gK)
+    options = optimset('MaxFunEvals', 5000);
+    [x fval flag] = fsolve( @(x) hhn(x,[120 gK(i) 0.3]), ss, options  );
+    e = HH_Jacobian( x, [120 gK(i) 0.3] );
+    e1 = sort( e( abs(imag(e)) < 1e-9 ) );
+    E(:,i) = [e1(2); e1(1); e( abs(imag(e))>1e-9 )];
+end
+figure('Color','w');clf
+filename = 'gk_eig.gif';
+plot( [-8 2], [0 0], '-k', [0 0], [-5 5], 'k');
+hold on;plot( real(E(1,:)),imag(E(1,:)),'r','linewidth',1.5);
+hold on;plot( real(E(2,:)),imag(E(2,:)),'g','linewidth',1.5);
+hold on;plot( real(E(3,:)),imag(E(3,:)),'m','linewidth',1.5);
+hold on;plot( real(E(4,:)),imag(E(4,:)),'b','linewidth',1.5);
+xlim([-8 2]);ylim([-5 5]);
+hold on; h1 = plot(real(E(1,i)),imag(E(1,i)),'or','MarkerFaceColor','r');
+hold on; h2 = plot(real(E(2,i)),imag(E(2,i)),'og','MarkerFaceColor','g');
+hold on; h3 = plot(real(E(3,i)),imag(E(3,i)),'om','MarkerFaceColor','m');
+hold on; h4 = plot(real(E(4,i)),imag(E(4,i)),'ob','MarkerFaceColor','b');
+for i = 1:numel(gK)
+    set(h1,'XData',real(E(1,i)),'YData',imag(E(1,i)));
+    set(h2,'XData',real(E(2,i)),'YData',imag(E(2,i)));
+    set(h3,'XData',real(E(3,i)),'YData',imag(E(3,i)));
+    set(h4,'XData',real(E(4,i)),'YData',imag(E(4,i)));
+    title(['g_K=',num2str(gK(i),'%3.2f')]);
+    drawnow
+    frame = getframe(1);
+    im = frame2im(frame);
+    [imind,cm] = rgb2ind(im,256);
+    if i == 1;
+        imwrite(imind,cm,filename,'gif', 'Loopcount',inf,'DelayTime',0.2);
+    else
+        imwrite(imind,cm,filename,'gif','WriteMode','append','DelayTime',0.2);
+    end  
+end
+
+
+
 
 %% 
 % Highlight the vector field 
